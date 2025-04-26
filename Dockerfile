@@ -17,5 +17,7 @@ COPY . ./
 # Build the app.
 RUN npm run build
 
+RUN npm run db:push
+
 # Serve the app
 CMD ["npm", "run", "start"]
