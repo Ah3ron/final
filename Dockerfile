@@ -14,9 +14,13 @@ RUN npm ci
 # Copy local code to the container image.
 COPY . ./
 
+# Specify the variable you need
+ARG DATABASE_URL
+# Use the varible
+RUN echo $DATABASE_URL
+
 # Build the app.
 RUN npm run build
-
 RUN npm run db:push
 
 # Serve the app
