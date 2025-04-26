@@ -21,7 +21,7 @@ RUN echo $DATABASE_URL
 
 # Build the app.
 RUN npm run build
-RUN npm run db:push
+RUN npm run db:push -- --force
 
 # Serve the app
 CMD ["npm", "run", "start"]
