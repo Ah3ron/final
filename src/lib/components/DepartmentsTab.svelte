@@ -1,48 +1,47 @@
 <script>
   import { onMount } from 'svelte';
-  import { departmentMessages, joinDepartment, leaveDepartment, sendDepartmentMessage } from '$lib/websocket-client';
-  
-  // Demo departments
+  import {
+    departmentMessages,
+    joinDepartment,
+    leaveDepartment,
+    sendDepartmentMessage
+  } from '$lib/websocket-client';
+
+  // Демонстрационные отделы
   const departments = [
-    { id: 1, name: 'Loans', description: 'Loan processing and approvals' },
-    { id: 2, name: 'Transfers', description: 'Money transfer operations' },
-    { id: 3, name: 'Cashiers', description: 'Cash operations and management' },
-    { id: 4, name: 'Accounts', description: 'Account management and services' },
-    { id: 5, name: 'Cards', description: 'Credit and debit card services' }
+    { id: 1, name: 'Кредиты', description: 'Оформление и утверждение кредитов' },
+    { id: 2, name: 'Переводы', description: 'Операции по переводам денежных средств' },
+    { id: 3, name: 'Касса', description: 'Кассовые операции и управление' },
+    { id: 4, name: 'Счета', description: 'Управление счетами и обслуживание' },
+    { id: 5, name: 'Карты', description: 'Обслуживание кредитных и дебетовых карт' }
   ];
-  
-  let selectedDepartment = null;
-  let messageInput = '';
-  let departmentMembers = [];
-  
-  // Function to select a department
+
+  let selectedDepartment = $state(null);
+  let messageInput = $state('');
+  let departmentMembers = $state([]);
+
   function selectDepartment(department) {
     if (selectedDepartment) {
       leaveDepartment(selectedDepartment.id);
     }
-    
     selectedDepartment = department;
     joinDepartment(department.id);
-    
-    // Demo department members
+    // Демонстрационные участники отдела
     departmentMembers = [
-      { userId: 'user1', username: 'John Doe', position: 'Department Manager' },
-      { userId: 'user2', username: 'Jane Smith', position: 'Senior Specialist' },
-      { userId: 'user3', username: 'Robert Johnson', position: 'Specialist' }
+      { userId: 'user1', username: 'Иван Иванов', position: 'Руководитель отдела' },
+      { userId: 'user2', username: 'Ольга Смирнова', position: 'Ведущий специалист' },
+      { userId: 'user3', username: 'Павел Петров', position: 'Специалист' }
     ];
   }
-  
-  // Function to send a message to the department
+
   function handleSendMessage() {
     if (!messageInput.trim() || !selectedDepartment) return;
-    
+
     sendDepartmentMessage(selectedDepartment.id, messageInput);
-    
-    // Add message to local department messages for immediate display
-    departmentMessages.update(deptMsgs => {
+
+    departmentMessages.update((deptMsgs) => {
       const dept = selectedDepartment.id;
       const deptMessages = deptMsgs[dept] || [];
-      
       return {
         ...deptMsgs,
         [dept]: [
@@ -57,28 +56,25 @@
         ]
       };
     });
-    
     messageInput = '';
   }
-  
-  // Initialize with some demo department messages
+
   onMount(() => {
-    // Add demo messages for departments
-    departmentMessages.update(deptMsgs => {
+    departmentMessages.update((deptMsgs) => {
       return {
         1: [
           {
             messageId: 'dept1-msg1',
             senderId: 'user1',
             departmentId: 1,
-            content: 'Team, we need to review the new loan approval process.',
+            content: 'Коллеги, необходимо пересмотреть процесс одобрения кредитов.',
             timestamp: new Date(Date.now() - 3600000).toISOString()
           },
           {
             messageId: 'dept1-msg2',
             senderId: 'user2',
             departmentId: 1,
-            content: 'I\'ve prepared the documentation for the updated process.',
+            content: 'Я подготовила документацию по обновленному процессу.',
             timestamp: new Date(Date.now() - 3500000).toISOString()
           }
         ],
@@ -87,7 +83,8 @@
             messageId: 'dept2-msg1',
             senderId: 'user3',
             departmentId: 2,
-            content: 'The international transfer system will be down for maintenance tonight.',
+            content:
+              'Сегодня ночью система международных переводов будет недоступна из-за техобслуживания.',
             timestamp: new Date(Date.now() - 7200000).toISOString()
           }
         ],
@@ -97,273 +94,106 @@
   });
 </script>
 
-<div class="departments-container">
-  <div class="departments-sidebar">
-    <h3>Departments</h3>
-    <ul class="departments-list">
+<div class="border-base-200 bg-base-100 flex h-full overflow-hidden rounded-lg border">
+  <!-- Sidebar -->
+  <div class="bg-base-200 border-base-300 flex w-64 flex-col border-r">
+    <h3 class="border-base-300 m-0 flex items-center gap-2 border-b p-4 text-lg font-bold">
+      <span class="i-heroicons-building-office-2">Отделы</span>
+    </h3>
+    <ul class="flex-1 overflow-y-auto">
       {#each departments as department}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <li 
-          class="department-item {selectedDepartment && selectedDepartment.id === department.id ? 'selected' : ''}"
+        <li
+          class={`border-base-300 hover:bg-base-300 cursor-pointer border-b px-4 py-3 transition-colors ${
+            selectedDepartment && selectedDepartment.id === department.id
+              ? 'bg-primary text-primary-content'
+              : ''
+          }`}
           onclick={() => selectDepartment(department)}
+          tabindex="0"
         >
-          <div class="department-name">{department.name}</div>
-          <div class="department-description">{department.description}</div>
+          <div class="font-semibold">{department.name}</div>
+          <div class="text-xs opacity-70">{department.description}</div>
         </li>
       {/each}
     </ul>
   </div>
-  
-  <div class="department-content">
+
+  <!-- Main Content -->
+  <div class="bg-base-100 flex flex-1 flex-col">
     {#if selectedDepartment}
-      <div class="department-header">
-        <h2>{selectedDepartment.name}</h2>
-        <p>{selectedDepartment.description}</p>
+      <div class="border-base-200 bg-base-100 border-b p-6">
+        <h2 class="mb-2 text-2xl font-bold">{selectedDepartment.name}</h2>
+        <p class="text-base-content/70">{selectedDepartment.description}</p>
       </div>
-      
-      <div class="department-body">
-        <div class="department-chat">
-          <div class="chat-messages">
+
+      <div class="flex min-h-0 flex-1">
+        <!-- Chat -->
+        <div class="border-base-200 flex flex-1 flex-col border-r">
+          <div class="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
             {#if !$departmentMessages[selectedDepartment.id] || $departmentMessages[selectedDepartment.id].length === 0}
-              <div class="no-messages">
-                <p>No messages in this department channel yet.</p>
+              <div class="text-base-content/60 flex min-h-[120px] items-center justify-center">
+                <p>В этом отделе пока нет сообщений.</p>
               </div>
             {:else}
               {#each $departmentMessages[selectedDepartment.id] as message}
-                <div class="message-item {message.senderId === 'currentUser' ? 'sent' : 'received'}">
-                  <div class="message-sender">{message.senderId === 'currentUser' ? 'You' : message.senderId}</div>
-                  <div class="message-content">{message.content}</div>
-                  <div class="message-time">{new Date(message.timestamp).toLocaleTimeString()}</div>
+                <div
+                  class={`chat ${message.senderId === 'currentUser' ? 'chat-end' : 'chat-start'}`}
+                >
+                  <div
+                    class={`chat-bubble ${message.senderId === 'currentUser' ? 'bg-primary text-primary-content' : 'bg-base-200'}`}
+                  >
+                    <div class="mb-1 text-xs font-medium">
+                      {message.senderId === 'currentUser' ? 'Вы' : message.senderId}
+                    </div>
+                    <div>{message.content}</div>
+                    <div class="mt-1 text-right text-xs opacity-50">
+                      {new Date(message.timestamp).toLocaleTimeString('ru-RU', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
                 </div>
               {/each}
             {/if}
           </div>
-          
-          <div class="message-input">
-            <input 
-              type="text" 
-              placeholder="Type a message to the department..." 
+          <form
+            class="bg-base-100 border-base-200 flex gap-2 border-t p-4"
+            onsubmit={handleSendMessage}
+          >
+            <input
+              type="text"
+              placeholder="Напишите сообщение в отдел..."
+              class="input input-bordered flex-1"
               bind:value={messageInput}
               onkeydown={(e) => e.key === 'Enter' && handleSendMessage()}
             />
-            <button onclick={handleSendMessage}>Send</button>
-          </div>
+            <button type="submit" class="btn btn-primary">Отправить</button>
+          </form>
         </div>
-        
-        <div class="department-members">
-          <h3>Members ({departmentMembers.length})</h3>
-          <ul class="members-list">
+
+        <!-- Department Members -->
+        <div class="border-base-200 bg-base-100 flex w-64 flex-col border-l p-4">
+          <h3 class="border-base-200 mb-4 border-b pb-2 font-semibold">
+            Участники ({departmentMembers.length})
+          </h3>
+          <ul class="flex-1 overflow-y-auto">
             {#each departmentMembers as member}
-              <li class="member-item">
-                <div class="member-name">{member.username}</div>
-                <div class="member-position">{member.position}</div>
+              <li class="mb-4 last:mb-0">
+                <div class="font-semibold">{member.username}</div>
+                <div class="text-xs opacity-70">{member.position}</div>
               </li>
             {/each}
           </ul>
         </div>
       </div>
     {:else}
-      <div class="no-department-selected">
-        <p>Select a department to view details and chat</p>
+      <div class="text-base-content/70 flex flex-1 items-center justify-center">
+        <p>Выберите отдел, чтобы просмотреть подробности и начать чат</p>
       </div>
     {/if}
   </div>
 </div>
-
-<style>
-  .departments-container {
-    display: flex;
-    height: 100%;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  
-  .departments-sidebar {
-    width: 250px;
-    background-color: #f5f5f5;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .departments-sidebar h3 {
-    padding: 15px;
-    margin: 0;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .departments-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow-y: auto;
-  }
-  
-  .department-item {
-    padding: 15px;
-    cursor: pointer;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .department-item:hover {
-    background-color: #e9e9e9;
-  }
-  
-  .department-item.selected {
-    background-color: #e3f2fd;
-  }
-  
-  .department-name {
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-  
-  .department-description {
-    font-size: 12px;
-    color: #777;
-  }
-  
-  .department-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-  }
-  
-  .department-header {
-    padding: 15px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .department-header h2 {
-    margin: 0 0 10px 0;
-  }
-  
-  .department-header p {
-    margin: 0;
-    color: #777;
-  }
-  
-  .department-body {
-    flex: 1;
-    display: flex;
-  }
-  
-  .department-chat {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #ddd;
-  }
-  
-  .chat-messages {
-    flex: 1;
-    padding: 15px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .no-messages, .no-department-selected {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #777;
-  }
-  
-  .message-item {
-    max-width: 70%;
-    margin-bottom: 15px;
-    padding: 10px;
-    border-radius: 4px;
-    position: relative;
-  }
-  
-  .message-item.sent {
-    align-self: flex-end;
-    background-color: #e3f2fd;
-  }
-  
-  .message-item.received {
-    align-self: flex-start;
-    background-color: #f5f5f5;
-  }
-  
-  .message-sender {
-    font-weight: bold;
-    margin-bottom: 5px;
-    font-size: 12px;
-  }
-  
-  .message-time {
-    font-size: 10px;
-    color: #777;
-    text-align: right;
-    margin-top: 5px;
-  }
-  
-  .message-input {
-    padding: 15px;
-    border-top: 1px solid #ddd;
-    display: flex;
-  }
-  
-  .message-input input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-right: 10px;
-  }
-  
-  .message-input button {
-    padding: 10px 15px;
-    background-color: #1976D2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .message-input button:hover {
-    background-color: #1565C0;
-  }
-  
-  .department-members {
-    width: 250px;
-    padding: 15px;
-    border-left: 1px solid #ddd;
-    overflow-y: auto;
-  }
-  
-  .department-members h3 {
-    margin-top: 0;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .members-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-  
-  .member-item {
-    padding: 10px 0;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .member-name {
-    font-weight: bold;
-    margin-bottom: 5px;
-  }
-  
-  .member-position {
-    font-size: 12px;
-    color: #777;
-  }
-</style>

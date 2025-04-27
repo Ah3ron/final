@@ -17,14 +17,12 @@ export async function sendDirectMessage(senderId, recipientId, content) {
     content,
     isRead: false
   };
-  
-  const [result] = await db.insert(table.message)
-    .values(message)
-    .returning();
-  
+
+  const [result] = await db.insert(table.message).values(message).returning();
+
   // Notify recipient about new message
   notifyUserAboutNewMessage(recipientId, result);
-  
+
   return result;
 }
 
@@ -42,14 +40,12 @@ export async function sendDepartmentMessage(senderId, departmentId, content) {
     content,
     isRead: false
   };
-  
-  const [result] = await db.insert(table.message)
-    .values(message)
-    .returning();
-  
+
+  const [result] = await db.insert(table.message).values(message).returning();
+
   // Notify department about new message
   notifyDepartmentAboutNewMessage(departmentId, result);
-  
+
   return result;
 }
 
@@ -62,20 +58,15 @@ export async function sendDepartmentMessage(senderId, departmentId, content) {
  * @returns {Promise<Array>} List of messages
  */
 export async function getDirectMessagesBetweenUsers(userId1, userId2, limit = 50, offset = 0) {
-  return db.select()
+  return db
+    .select()
     .from(table.message)
     .where(
       and(
         isNull(table.message.departmentId),
         or(
-          and(
-            eq(table.message.senderId, userId1),
-            eq(table.message.recipientId, userId2)
-          ),
-          and(
-            eq(table.message.senderId, userId2),
-            eq(table.message.recipientId, userId1)
-          )
+          and(eq(table.message.senderId, userId1), eq(table.message.recipientId, userId2)),
+          and(eq(table.message.senderId, userId2), eq(table.message.recipientId, userId1))
         )
       )
     )
@@ -92,7 +83,8 @@ export async function getDirectMessagesBetweenUsers(userId1, userId2, limit = 50
  * @returns {Promise<Array>} List of messages
  */
 export async function getDepartmentMessages(departmentId, limit = 50, offset = 0) {
-  return db.select()
+  return db
+    .select()
     .from(table.message)
     .where(eq(table.message.departmentId, departmentId))
     .orderBy(desc(table.message.createdAt))
@@ -106,11 +98,12 @@ export async function getDepartmentMessages(departmentId, limit = 50, offset = 0
  * @returns {Promise<Object|null>} Updated message or null if not found
  */
 export async function markMessageAsRead(messageId) {
-  const [message] = await db.update(table.message)
+  const [message] = await db
+    .update(table.message)
     .set({ isRead: true })
     .where(eq(table.message.id, messageId))
     .returning();
-  
+
   return message || null;
 }
 
@@ -120,14 +113,10 @@ export async function markMessageAsRead(messageId) {
  * @returns {Promise<Array>} List of unread messages
  */
 export async function getUnreadMessagesForUser(userId) {
-  return db.select()
+  return db
+    .select()
     .from(table.message)
-    .where(
-      and(
-        eq(table.message.recipientId, userId),
-        eq(table.message.isRead, false)
-      )
-    )
+    .where(and(eq(table.message.recipientId, userId), eq(table.message.isRead, false)))
     .orderBy(desc(table.message.createdAt));
 }
 
@@ -140,27 +129,25 @@ export async function getUserRecentConversations(userId) {
   // This is a simplified implementation
   // In a real system, we would use a more efficient query
   // to get the most recent message from each conversation
-  
+
   // Get all messages where user is sender or recipient
-  const messages = await db.select()
+  const messages = await db
+    .select()
     .from(table.message)
     .where(
       and(
         isNull(table.message.departmentId),
-        or(
-          eq(table.message.senderId, userId),
-          eq(table.message.recipientId, userId)
-        )
+        or(eq(table.message.senderId, userId), eq(table.message.recipientId, userId))
       )
     )
     .orderBy(desc(table.message.createdAt));
-  
+
   // Group messages by conversation
   const conversations = new Map();
-  
+
   for (const message of messages) {
     const otherUserId = message.senderId === userId ? message.recipientId : message.senderId;
-    
+
     if (!conversations.has(otherUserId)) {
       conversations.set(otherUserId, {
         userId: otherUserId,
@@ -171,7 +158,7 @@ export async function getUserRecentConversations(userId) {
       conversations.get(otherUserId).unreadCount++;
     }
   }
-  
+
   return Array.from(conversations.values());
 }
 
@@ -184,9 +171,9 @@ function notifyUserAboutNewMessage(userId, message) {
   try {
     const io = getIO();
     const userSockets = getUserSockets(userId);
-    
+
     if (userSockets && userSockets.size > 0) {
-      userSockets.forEach(socketId => {
+      userSockets.forEach((socketId) => {
         io.to(socketId).emit('new_message', {
           messageId: message.id,
           senderId: message.senderId,
@@ -208,7 +195,7 @@ function notifyUserAboutNewMessage(userId, message) {
 function notifyDepartmentAboutNewMessage(departmentId, message) {
   try {
     const io = getIO();
-    
+
     io.to(`department:${departmentId}`).emit('new_department_message', {
       messageId: message.id,
       senderId: message.senderId,

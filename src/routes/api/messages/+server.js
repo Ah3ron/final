@@ -73,11 +73,7 @@ export async function POST({ request, locals }) {
 
     if (recipientId) {
       // Send direct message
-      message = await messagingService.sendDirectMessage(
-        locals.user.id,
-        recipientId,
-        content
-      );
+      message = await messagingService.sendDirectMessage(locals.user.id, recipientId, content);
     } else if (departmentId) {
       // Send department message
       message = await messagingService.sendDepartmentMessage(
@@ -86,10 +82,13 @@ export async function POST({ request, locals }) {
         content
       );
     } else {
-      return new Response(JSON.stringify({ error: 'Either recipientId or departmentId is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return new Response(
+        JSON.stringify({ error: 'Either recipientId or departmentId is required' }),
+        {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        }
+      );
     }
 
     return json(message);

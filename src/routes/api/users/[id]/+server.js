@@ -42,7 +42,7 @@ export async function PATCH({ params, request, locals }) {
   }
 
   const { id } = params;
-  
+
   // Only allow users to update their own profile or admins to update any profile
   if (id !== locals.user.id && !isAdmin(locals.user)) {
     return new Response(JSON.stringify({ error: 'Forbidden' }), {
@@ -53,13 +53,13 @@ export async function PATCH({ params, request, locals }) {
 
   try {
     const userData = await request.json();
-    
+
     // Don't allow changing username through this endpoint
     delete userData.username;
-    
+
     // Don't allow changing password through this endpoint
     delete userData.passwordHash;
-    
+
     // Only admins can change role and department
     if (!isAdmin(locals.user)) {
       delete userData.roleId;

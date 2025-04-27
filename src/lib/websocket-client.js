@@ -36,7 +36,7 @@ operations.set([
 
 // Derived store for unread message count
 export const unreadMessageCount = derived(messages, ($messages) => {
-  return $messages.filter(msg => !msg.isRead).length;
+  return $messages.filter((msg) => !msg.isRead).length;
 });
 
 // Socket instance
@@ -45,85 +45,85 @@ let socket;
 // Initialize WebSocket connection
 export function initWebSocket(token) {
   if (!browser) return;
-  
+
   if (socket) {
     // Already connected or connecting
     return;
   }
-  
+
   connecting.set(true);
   connectionError.set(null);
-  
+
   // Connect to WebSocket server
   socket = io({
     auth: {
       token
     }
   });
-  
+
   // Connection events
   socket.on('connect', () => {
     console.log('WebSocket connected');
     connected.set(true);
     connecting.set(false);
     connectionError.set(null);
-    
+
     // Authenticate with token
     socket.emit('authenticate', token);
   });
-  
+
   socket.on('disconnect', () => {
     console.log('WebSocket disconnected');
     connected.set(false);
   });
-  
+
   socket.on('connect_error', (error) => {
     console.error('WebSocket connection error:', error);
     connecting.set(false);
     connectionError.set(error.message);
   });
-  
+
   // Authentication events
   socket.on('authenticated', (userData) => {
     console.log('WebSocket authenticated:', userData);
   });
-  
+
   socket.on('auth_error', (error) => {
     console.error('WebSocket authentication error:', error);
     connectionError.set(error);
-    
+
     // Redirect to login page if authentication fails
     goto('/login');
   });
-  
+
   // User events
   socket.on('online_users', (users) => {
     console.log('Online users:', users);
     onlineUsers.set(users);
   });
-  
+
   socket.on('user_online', (user) => {
     console.log('User online:', user);
-    onlineUsers.update(users => {
-      if (!users.find(u => u.userId === user.userId)) {
+    onlineUsers.update((users) => {
+      if (!users.find((u) => u.userId === user.userId)) {
         return [...users, user];
       }
       return users;
     });
   });
-  
+
   socket.on('user_offline', (user) => {
     console.log('User offline:', user);
-    onlineUsers.update(users => users.filter(u => u.userId !== user.userId));
+    onlineUsers.update((users) => users.filter((u) => u.userId !== user.userId));
   });
-  
+
   // Message events
   socket.on('new_message', (message) => {
     console.log('New message:', message);
-    messages.update(msgs => [message, ...msgs]);
-    
+    messages.update((msgs) => [message, ...msgs]);
+
     // Add notification for new message
-    notifications.update(notifs => [
+    notifications.update((notifs) => [
       {
         id: `msg-${message.messageId}`,
         type: 'message',
@@ -135,39 +135,39 @@ export function initWebSocket(token) {
       ...notifs
     ]);
   });
-  
+
   socket.on('message_sent', (confirmation) => {
     console.log('Message sent confirmation:', confirmation);
   });
-  
+
   // Department events
   socket.on('joined_department', (department) => {
     console.log('Joined department:', department);
   });
-  
+
   socket.on('user_joined_department', (data) => {
     console.log('User joined department:', data);
   });
-  
+
   socket.on('user_left_department', (data) => {
     console.log('User left department:', data);
   });
-  
+
   socket.on('new_department_message', (message) => {
     console.log('New department message:', message);
-    
-    departmentMessages.update(deptMsgs => {
+
+    departmentMessages.update((deptMsgs) => {
       const dept = message.departmentId;
       const deptMessages = deptMsgs[dept] || [];
-      
+
       return {
         ...deptMsgs,
         [dept]: [message, ...deptMessages]
       };
     });
-    
+
     // Add notification for new department message
-    notifications.update(notifs => [
+    notifications.update((notifs) => [
       {
         id: `dept-msg-${message.messageId}`,
         type: 'department_message',
@@ -179,14 +179,14 @@ export function initWebSocket(token) {
       ...notifs
     ]);
   });
-  
+
   // Operation events
   socket.on('new_operation', (operation) => {
     console.log('New operation:', operation);
-    operations.update(ops => [operation, ...ops]);
-    
+    operations.update((ops) => [operation, ...ops]);
+
     // Add notification for new operation
-    notifications.update(notifs => [
+    notifications.update((notifs) => [
       {
         id: `op-${operation.operationId}`,
         type: 'operation',
@@ -198,19 +198,19 @@ export function initWebSocket(token) {
       ...notifs
     ]);
   });
-  
+
   socket.on('operation_update', (update) => {
     console.log('Operation update:', update);
-    operations.update(ops => 
-      ops.map(op => 
-        op.id === update.operationId 
-          ? { ...op, status: update.status, updatedAt: update.updatedAt } 
+    operations.update((ops) =>
+      ops.map((op) =>
+        op.id === update.operationId
+          ? { ...op, status: update.status, updatedAt: update.updatedAt }
           : op
       )
     );
-    
+
     // Add notification for operation update
-    notifications.update(notifs => [
+    notifications.update((notifs) => [
       {
         id: `op-update-${update.operationId}`,
         type: 'operation_update',
@@ -222,12 +222,12 @@ export function initWebSocket(token) {
       ...notifs
     ]);
   });
-  
+
   // Error events
   socket.on('error', (error) => {
     console.error('WebSocket error:', error);
   });
-  
+
   return socket;
 }
 
@@ -237,7 +237,7 @@ export function sendDirectMessage(recipientId, content) {
     console.error('WebSocket not connected');
     return false;
   }
-  
+
   socket.emit('direct_message', { recipientId, message: content });
   return true;
 }
@@ -248,7 +248,7 @@ export function sendDepartmentMessage(department, content) {
     console.error('WebSocket not connected');
     return false;
   }
-  
+
   socket.emit('department_message', { department, message: content });
   return true;
 }
@@ -259,7 +259,7 @@ export function joinDepartment(department) {
     console.error('WebSocket not connected');
     return false;
   }
-  
+
   socket.emit('join_department', department);
   return true;
 }
@@ -270,7 +270,7 @@ export function leaveDepartment(department) {
     console.error('WebSocket not connected');
     return false;
   }
-  
+
   socket.emit('leave_department', department);
   return true;
 }
@@ -281,19 +281,15 @@ export function requestOperation(type, data) {
     console.error('WebSocket not connected');
     return false;
   }
-  
+
   socket.emit('operation_request', { type, data });
   return true;
 }
 
 // Mark a notification as read
 export function markNotificationAsRead(notificationId) {
-  notifications.update(notifs => 
-    notifs.map(notif => 
-      notif.id === notificationId 
-        ? { ...notif, read: true } 
-        : notif
-    )
+  notifications.update((notifs) =>
+    notifs.map((notif) => (notif.id === notificationId ? { ...notif, read: true } : notif))
   );
 }
 

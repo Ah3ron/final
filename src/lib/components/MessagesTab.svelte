@@ -1,31 +1,32 @@
 <script>
   import { onMount } from 'svelte';
   import { messages, onlineUsers, sendDirectMessage } from '$lib/websocket-client';
-  
+
   let selectedUser = $state(null);
   let messageInput = $state('');
   let userMessages = $state([]);
-  
+
   // Derived value for current conversation messages
   $effect(() => {
     if (selectedUser) {
-      userMessages = $messages.filter(
-        msg => (msg.senderId === selectedUser.userId && msg.recipientId === 'currentUser') || 
-               (msg.senderId === 'currentUser' && msg.recipientId === selectedUser.userId)
-      ).sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+      userMessages = $messages
+        .filter(
+          (msg) =>
+            (msg.senderId === selectedUser.userId && msg.recipientId === 'currentUser') ||
+            (msg.senderId === 'currentUser' && msg.recipientId === selectedUser.userId)
+        )
+        .sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
     } else {
       userMessages = [];
     }
   });
-  
+
   // Function to send a message
   function handleSendMessage() {
     if (!messageInput.trim() || !selectedUser) return;
-    
     sendDirectMessage(selectedUser.userId, messageInput);
-    
     // Add message to local messages for immediate display
-    messages.update(msgs => [
+    messages.update((msgs) => [
       {
         messageId: `local-${Date.now()}`,
         senderId: 'currentUser',
@@ -36,16 +37,15 @@
       },
       ...msgs
     ]);
-    
     messageInput = '';
   }
-  
+
   // Function to select a user to chat with
   function selectUser(user) {
     selectedUser = user;
   }
-  
-  // Add some demo messages if there are none
+
+  // Add demo messages/users if none exist
   onMount(() => {
     if ($messages.length === 0) {
       messages.set([
@@ -53,7 +53,7 @@
           messageId: 'demo-1',
           senderId: 'user1',
           recipientId: 'currentUser',
-          content: 'Hello, do you have a moment to discuss the loan approval process?',
+          content: 'Здравствуйте! Можете обсудить процесс одобрения кредита?',
           timestamp: new Date(Date.now() - 3600000).toISOString(),
           isRead: false
         },
@@ -61,252 +61,101 @@
           messageId: 'demo-2',
           senderId: 'user2',
           recipientId: 'currentUser',
-          content: 'I need your approval on a transfer operation.',
+          content: 'Нужна ваша подпись для подтверждения перевода.',
           timestamp: new Date(Date.now() - 7200000).toISOString(),
           isRead: true
         }
       ]);
     }
-    
-    // Add demo users if there are none
     if ($onlineUsers.length === 0) {
       onlineUsers.set([
-        { userId: 'user1', username: 'John Doe' },
-        { userId: 'user2', username: 'Jane Smith' }
+        { userId: 'user1', username: 'Иван Ив��нов' },
+        { userId: 'user2', username: 'Ольга Смирнова' }
       ]);
     }
   });
 </script>
 
-<div class="messages-container">
-  <div class="users-sidebar">
-    <h3>Online Users</h3>
-    <div class="search-box">
-      <input type="text" placeholder="Search users..." />
+<div class="border-base-200 bg-base-100 flex h-full overflow-hidden rounded-lg border">
+  <!-- Sidebar -->
+  <div class="bg-base-200 border-base-300 flex w-64 flex-col border-r">
+    <h3 class="border-base-300 m-0 flex items-center gap-2 border-b p-4 text-lg font-bold">
+      <span class="i-heroicons-user-group"> Онлайн пользователи</span>
+    </h3>
+    <div class="border-base-300 border-b p-3">
+      <input type="text" placeholder="Поиск..." class="input input-bordered w-full" />
     </div>
-    <ul class="users-list">
+    <ul class="flex-1 overflow-y-auto">
       {#each $onlineUsers as user}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <li 
-          class="user-item {selectedUser && selectedUser.userId === user.userId ? 'selected' : ''}"
+        <li
+          class={`border-base-200 hover:bg-base-300 flex cursor-pointer items-center gap-2 border-b px-4 py-3 transition-colors ${
+            selectedUser && selectedUser.userId === user.userId
+              ? 'bg-primary text-primary-content'
+              : ''
+          }`}
           onclick={() => selectUser(user)}
+          tabindex="0"
         >
-          <span class="user-status online"></span>
-          <span class="user-name">{user.username || user.userId}</span>
-          {#if $messages.some(m => m.senderId === user.userId && !m.isRead)}
-            <span class="unread-badge"></span>
+          <span class="bg-success mr-2 h-3 w-3 rounded-full"></span>
+          <span class="flex-1">{user.username || user.userId}</span>
+          {#if $messages.some((m) => m.senderId === user.userId && !m.isRead)}
+            <span class="bg-warning h-2 w-2 rounded-full"></span>
           {/if}
         </li>
       {/each}
     </ul>
   </div>
-  
-  <div class="chat-area">
+
+  <!-- Chat Area -->
+  <div class="bg-base-100 flex flex-1 flex-col">
     {#if selectedUser}
-      <div class="chat-header">
-        <h3>{selectedUser.username || selectedUser.userId}</h3>
-        <span class="user-status online"></span>
+      <div class="border-base-200 flex items-center gap-2 border-b p-4">
+        <h3 class="flex-1 text-lg font-semibold">{selectedUser.username || selectedUser.userId}</h3>
+        <span class="bg-success h-3 w-3 rounded-full"></span>
       </div>
-      
-      <div class="messages-list">
+      <div class="flex flex-1 flex-col gap-3 overflow-y-auto p-4">
         {#if userMessages.length === 0}
-          <div class="no-messages">
-            <p>No messages yet. Start the conversation!</p>
+          <div class="text-base-content/60 flex min-h-[120px] items-center justify-center">
+            <p>Нет сообщений. Начните диалог!</p>
           </div>
         {:else}
           {#each userMessages as message}
-            <div class="message-item {message.senderId === 'currentUser' ? 'sent' : 'received'}">
-              <div class="message-content">{message.content}</div>
-              <div class="message-time">{new Date(message.timestamp).toLocaleTimeString()}</div>
+            <div class={`chat ${message.senderId === 'currentUser' ? 'chat-end' : 'chat-start'}`}>
+              <div
+                class={`chat-bubble ${message.senderId === 'currentUser' ? 'bg-primary text-primary-content' : 'bg-base-200'}`}
+              >
+                <div>{message.content}</div>
+                <div class="mt-1 text-right text-xs opacity-50">
+                  {new Date(message.timestamp).toLocaleTimeString('ru-RU', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </div>
+              </div>
             </div>
           {/each}
         {/if}
       </div>
-      
-      <div class="message-input">
-        <input 
-          type="text" 
-          placeholder="Type a message..." 
+      <form
+        class="bg-base-100 border-base-200 flex gap-2 border-t p-4"
+        onsubmit={handleSendMessage}
+      >
+        <input
+          type="text"
+          placeholder="Введите сообщение..."
+          class="input input-bordered flex-1"
           bind:value={messageInput}
           onkeydown={(e) => e.key === 'Enter' && handleSendMessage()}
         />
-        <button onclick={handleSendMessage}>Send</button>
-      </div>
+        <button type="submit" class="btn btn-primary">Отправить</button>
+      </form>
     {:else}
-      <div class="no-chat-selected">
-        <p>Select a user to start chatting</p>
+      <div class="text-base-content/70 flex flex-1 items-center justify-center">
+        <p>Выберите пользователя для переписки</p>
       </div>
     {/if}
   </div>
 </div>
-
-<style>
-  .messages-container {
-    display: flex;
-    height: 100%;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    overflow: hidden;
-  }
-  
-  .users-sidebar {
-    width: 250px;
-    background-color: #f5f5f5;
-    border-right: 1px solid #ddd;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .users-sidebar h3 {
-    padding: 15px;
-    margin: 0;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .search-box {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-  }
-  
-  .search-box input {
-    width: 100%;
-    padding: 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-  }
-  
-  .users-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    overflow-y: auto;
-    flex: 1;
-  }
-  
-  .user-item {
-    padding: 10px 15px;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-    position: relative;
-    border-bottom: 1px solid #eee;
-  }
-  
-  .user-item:hover {
-    background-color: #e9e9e9;
-  }
-  
-  .user-item.selected {
-    background-color: #e3f2fd;
-  }
-  
-  .user-status {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 10px;
-  }
-  
-  .user-status.online {
-    background-color: #4CAF50;
-  }
-  
-  .user-name {
-    flex: 1;
-  }
-  
-  .unread-badge {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
-    background-color: #FF5722;
-  }
-  
-  .chat-area {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    background-color: white;
-  }
-  
-  .chat-header {
-    padding: 15px;
-    border-bottom: 1px solid #ddd;
-    display: flex;
-    align-items: center;
-  }
-  
-  .chat-header h3 {
-    margin: 0;
-    flex: 1;
-  }
-  
-  .messages-list {
-    flex: 1;
-    padding: 15px;
-    overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-  }
-  
-  .no-messages, .no-chat-selected {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    color: #777;
-  }
-  
-  .message-item {
-    max-width: 70%;
-    margin-bottom: 10px;
-    padding: 10px;
-    border-radius: 4px;
-    position: relative;
-  }
-  
-  .message-item.sent {
-    align-self: flex-end;
-    background-color: #e3f2fd;
-  }
-  
-  .message-item.received {
-    align-self: flex-start;
-    background-color: #f5f5f5;
-  }
-  
-  .message-time {
-    font-size: 10px;
-    color: #777;
-    text-align: right;
-    margin-top: 5px;
-  }
-  
-  .message-input {
-    padding: 15px;
-    border-top: 1px solid #ddd;
-    display: flex;
-  }
-  
-  .message-input input {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    margin-right: 10px;
-  }
-  
-  .message-input button {
-    padding: 10px 15px;
-    background-color: #1976D2;
-    color: white;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  .message-input button:hover {
-    background-color: #1565C0;
-  }
-</style>

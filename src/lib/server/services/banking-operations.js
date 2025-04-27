@@ -17,14 +17,12 @@ export async function createOperation(type, requesterId, data) {
     status: 'pending',
     data
   };
-  
-  const [result] = await db.insert(table.bankingOperation)
-    .values(operation)
-    .returning();
-  
+
+  const [result] = await db.insert(table.bankingOperation).values(operation).returning();
+
   // Notify relevant departments about the new operation
   notifyDepartmentAboutOperation(type, result);
-  
+
   return result;
 }
 
@@ -34,10 +32,11 @@ export async function createOperation(type, requesterId, data) {
  * @returns {Promise<Object|null>} Operation or null if not found
  */
 export async function getOperationById(id) {
-  const [operation] = await db.select()
+  const [operation] = await db
+    .select()
     .from(table.bankingOperation)
     .where(eq(table.bankingOperation.id, id));
-  
+
   return operation || null;
 }
 
@@ -47,7 +46,8 @@ export async function getOperationById(id) {
  * @returns {Promise<Array>} List of operations
  */
 export async function getOperationsByRequesterId(requesterId) {
-  return db.select()
+  return db
+    .select()
     .from(table.bankingOperation)
     .where(eq(table.bankingOperation.requesterId, requesterId))
     .orderBy(table.bankingOperation.createdAt);
@@ -62,11 +62,12 @@ export async function getOperationsByDepartment(department) {
   // This is a simplified implementation
   // In a real system, we would join with user and department tables
   // to filter operations by department
-  
+
   // For now, we'll filter by operation type as a proxy for department
   const departmentOperationTypes = getDepartmentOperationTypes(department);
-  
-  return db.select()
+
+  return db
+    .select()
     .from(table.bankingOperation)
     .where(
       departmentOperationTypes.length > 0
@@ -89,22 +90,23 @@ export async function updateOperationStatus(id, status, approverId) {
     approverId,
     updatedAt: new Date()
   };
-  
+
   // If operation is completed, set completedAt
   if (status === 'completed') {
     updateData.completedAt = new Date();
   }
-  
-  const [operation] = await db.update(table.bankingOperation)
+
+  const [operation] = await db
+    .update(table.bankingOperation)
     .set(updateData)
     .where(eq(table.bankingOperation.id, id))
     .returning();
-  
+
   if (operation) {
     // Notify requester about status change
     notifyUserAboutOperationUpdate(operation);
   }
-  
+
   return operation || null;
 }
 
@@ -113,7 +115,8 @@ export async function updateOperationStatus(id, status, approverId) {
  * @returns {Promise<Array>} List of pending operations
  */
 export async function getPendingOperations() {
-  return db.select()
+  return db
+    .select()
     .from(table.bankingOperation)
     .where(eq(table.bankingOperation.status, 'pending'))
     .orderBy(table.bankingOperation.createdAt);
@@ -128,7 +131,7 @@ function notifyDepartmentAboutOperation(type, operation) {
   try {
     const io = getIO();
     const department = getOperationDepartment(type);
-    
+
     if (department) {
       io.to(`department:${department}`).emit('new_operation', {
         type,
@@ -150,9 +153,9 @@ function notifyUserAboutOperationUpdate(operation) {
   try {
     const io = getIO();
     const userSockets = getUserSockets(operation.requesterId);
-    
+
     if (userSockets && userSockets.size > 0) {
-      userSockets.forEach(socketId => {
+      userSockets.forEach((socketId) => {
         io.to(socketId).emit('operation_update', {
           operationId: operation.id,
           status: operation.status,
@@ -160,7 +163,7 @@ function notifyUserAboutOperationUpdate(operation) {
         });
       });
     }
-    
+
     // Also create a notification in the database
     createNotification(
       operation.requesterId,
@@ -185,7 +188,14 @@ function notifyUserAboutOperationUpdate(operation) {
  * @param {string} relatedEntityId - Related entity ID
  * @returns {Promise<Object>} Created notification
  */
-async function createNotification(userId, title, content, type, relatedEntityType, relatedEntityId) {
+async function createNotification(
+  userId,
+  title,
+  content,
+  type,
+  relatedEntityType,
+  relatedEntityId
+) {
   const notification = {
     userId,
     title,
@@ -194,11 +204,9 @@ async function createNotification(userId, title, content, type, relatedEntityTyp
     relatedEntityType,
     relatedEntityId
   };
-  
-  const [result] = await db.insert(table.notification)
-    .values(notification)
-    .returning();
-  
+
+  const [result] = await db.insert(table.notification).values(notification).returning();
+
   return result;
 }
 
@@ -209,14 +217,14 @@ async function createNotification(userId, title, content, type, relatedEntityTyp
  */
 function getOperationDepartment(type) {
   const operationDepartments = {
-    'loan_approval': 'loans',
-    'transfer': 'transfers',
-    'withdrawal': 'cashiers',
-    'deposit': 'cashiers',
-    'account_opening': 'accounts',
-    'card_issuance': 'cards'
+    loan_approval: 'loans',
+    transfer: 'transfers',
+    withdrawal: 'cashiers',
+    deposit: 'cashiers',
+    account_opening: 'accounts',
+    card_issuance: 'cards'
   };
-  
+
   return operationDepartments[type] || null;
 }
 
@@ -227,13 +235,13 @@ function getOperationDepartment(type) {
  */
 function getDepartmentOperationTypes(department) {
   const departmentOperations = {
-    'loans': ['loan_approval', 'loan_disbursement'],
-    'transfers': ['transfer', 'wire_transfer'],
-    'cashiers': ['withdrawal', 'deposit'],
-    'accounts': ['account_opening', 'account_closing'],
-    'cards': ['card_issuance', 'card_blocking']
+    loans: ['loan_approval', 'loan_disbursement'],
+    transfers: ['transfer', 'wire_transfer'],
+    cashiers: ['withdrawal', 'deposit'],
+    accounts: ['account_opening', 'account_closing'],
+    cards: ['card_issuance', 'card_blocking']
   };
-  
+
   return departmentOperations[department] || [];
 }
 

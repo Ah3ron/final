@@ -25,7 +25,7 @@ export async function GET({ url, locals }) {
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
+
       // Get operations by department
       operations = await bankingOperationsService.getOperationsByDepartment(department);
     } else if (status === 'pending' && hasPermission(locals.user, 'approve_operations')) {
@@ -74,11 +74,7 @@ export async function POST({ request, locals }) {
     }
 
     // Create operation
-    const operation = await bankingOperationsService.createOperation(
-      type,
-      locals.user.id,
-      data
-    );
+    const operation = await bankingOperationsService.createOperation(type, locals.user.id, data);
 
     return json(operation);
   } catch (error) {
@@ -94,14 +90,23 @@ export async function POST({ request, locals }) {
 function hasPermission(user, permission) {
   // This is a simplified implementation
   // In a real system, we would check user's role and permissions
-  
+
   // For now, we'll assume certain permissions based on role ID
   const rolePermissions = {
-    1: ['view_department_operations', 'approve_operations', 'create_loan_approval', 'create_transfer', 'create_withdrawal', 'create_deposit', 'create_account_opening', 'create_card_issuance'], // Admin
+    1: [
+      'view_department_operations',
+      'approve_operations',
+      'create_loan_approval',
+      'create_transfer',
+      'create_withdrawal',
+      'create_deposit',
+      'create_account_opening',
+      'create_card_issuance'
+    ], // Admin
     2: ['view_department_operations', 'approve_operations', 'create_loan_approval'], // Loan Officer
     3: ['create_transfer', 'create_withdrawal', 'create_deposit'], // Cashier
     4: ['create_account_opening', 'create_card_issuance'] // Account Manager
   };
-  
+
   return rolePermissions[user.roleId]?.includes(permission) || false;
 }
